@@ -4,10 +4,10 @@ import os
 
 # Настройки изменения параметров
 STATS_CHANGE_RATES = {
-    'hunger_per_hour': 1000,
+    'hunger_per_hour': 10000,
     'happiness_per_hour': -5000,
-    'health_per_hour': -2000,
-    'feed_hunger_reduction': 30,
+    'health_per_hour': -200,
+    'feed_hunger_reduction': 30000,
     'play_happiness_increase': 20,
     'health_feed_benefit': 5,
     'health_play_benefit': 5
@@ -17,7 +17,7 @@ STATS_CHANGE_RATES = {
 PET_IMAGES = {
     'кролик': 'Rabbit_portrait.png',
     'сова': 'Owl_portrait.png',
-    'ёж': 'Hedgehog_portrait.png',
+    'ёж': 'Porcupine_portrait.png',
     'обезьянка': 'Monkey_portrait.png'
 }
 
@@ -45,4 +45,4 @@ HEALTH_STATUSES = {
     'good': (60, 101, "Хорошее состояние 😊")
 }
 
-GAMES = ["мяч", "прятки", "догонялки", "прыжки", "головоломки"]
+GAMES = ["мяч", "прятки", "догонялки"]

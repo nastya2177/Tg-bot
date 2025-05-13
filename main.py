@@ -1,4 +1,4 @@
-# bot.py
+
 import logging
 import random
 from datetime import datetime, timedelta
@@ -24,7 +24,7 @@ async def start(update, context):
     if pet:
         await update.message.reply_text(
             f"У вас уже есть питомец по имени {pet['name']} ({pet['pet_type']})!\n"
-            "Используйте /status чтобы проверить его состояние или /play чтобы поиграть с ним."
+            "Используйте /status чтобы проверить его состояние, /feed чтобы покормить или /play чтобы поиграть с ним."
         )
         return ConversationHandler.END
     else:
@@ -95,13 +95,13 @@ async def get_pet_type(update, context):
         with open(PET_IMAGES[pet_type], 'rb') as photo:
             await update.message.reply_photo(
                 photo=InputFile(photo),
-                caption=f"Поздравляю! Вы завели нового {pet_type} по имени {pet_name}!\n"
+                caption=f"Поздравляю! У Вас теперь есть {pet_type} по имени {pet_name}!\n"
                         "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
                 reply_markup=ReplyKeyboardRemove()
             )
     except FileNotFoundError:
         await update.message.reply_text(
-            f"Поздравляю! Вы завели нового {pet_type} по имени {pet_name}!\n"
+            f"Поздравляю! У Вас теперь есть {pet_type} по имени {pet_name}!\n"
             "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
             reply_markup=ReplyKeyboardRemove()
         )
@@ -147,8 +147,19 @@ async def feed(update, context):
     pet = check_pet_status(user_id)
 
     if not pet:
-        await update.message.reply_text("У вас нет живого питомца. Используйте /start чтобы создать нового.")
+        history = get_pets_history(user_id)
+        if history:
+            last_pet = history[0]
+            lifespan = str(timedelta(seconds=int(last_pet['lifespan_seconds'])))
+            await update.message.reply_text(
+                f"Ваш питомец {last_pet['name']} ({last_pet['pet_type']}) умер...\n"
+                f"Он прожил: {lifespan}\n"
+                "Используйте /start чтобы завести нового питомца или /history чтобы посмотреть историю."
+            )
+        else:
+            await update.message.reply_text("У вас еще нет питомца. Используйте /start чтобы создать его.")
         return
+
 
     now = datetime.now().isoformat()
     hunger = max(0, pet['hunger'] - STATS_CHANGE_RATES['feed_hunger_reduction'])
@@ -162,7 +173,7 @@ async def feed(update, context):
     )
 
     await update.message.reply_text(
-        f"Вы покормили {pet['name']} ({pet['pet_type']})! 🍔 (+{STATS_CHANGE_RATES['health_feed_benefit']} к здоровью)")
+        f"{pet['name']} покормлен! 🍔")
 
 
 async def play(update, context):
@@ -170,7 +181,17 @@ async def play(update, context):
     pet = check_pet_status(user_id)
 
     if not pet:
-        await update.message.reply_text("У вас нет живого питомца. Используйте /start чтобы создать нового.")
+        history = get_pets_history(user_id)
+        if history:
+            last_pet = history[0]
+            lifespan = str(timedelta(seconds=int(last_pet['lifespan_seconds'])))
+            await update.message.reply_text(
+                f"Ваш питомец {last_pet['name']} ({last_pet['pet_type']}) умер...\n"
+                f"Он прожил: {lifespan}\n"
+                "Используйте /start чтобы завести нового питомца или /history чтобы посмотреть историю."
+            )
+        else:
+            await update.message.reply_text("У вас еще нет питомца. Используйте /start чтобы создать его.")
         return
 
     now = datetime.now().isoformat()
@@ -186,8 +207,7 @@ async def play(update, context):
 
     game = random.choice(GAMES)
     await update.message.reply_text(
-        f"Вы поиграли с {pet['name']} ({pet['pet_type']}) в {game}! 🎾 "
-        f"(+{STATS_CHANGE_RATES['health_play_benefit']} к здоровью)"
+        f"{pet['name']} поиграл с Вами в {game}! 🎾 "
     )
 
 
