@@ -1,10 +1,12 @@
+# bot.py
 import logging
-import os
+import random
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, ConversationHandler
 from telegram import ReplyKeyboardRemove, InputFile
 from config import BOT_TOKEN
 from database import init_db, create_pet, get_pet, check_pet_status, update_pet
-from constants import PET_IMAGES, PET_TYPE_KEYBOARD, NAME, PET_TYPE, HEALTH_STATUSES
+from constants import (PET_IMAGES_PRELOADED, PET_TYPE_KEYBOARD,
+                       NAME, PET_TYPE, HEALTH_STATUSES, STATS_CHANGE_RATES, GAMES)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -21,7 +23,7 @@ async def start(update, context):
     if pet:
         await update.message.reply_text(
             f"У вас уже есть питомец по имени {pet['name']} ({pet['pet_type']})!\n"
-            "Используйте /status чтобы проверить его состояние или /play чтобы поиграть с ним."
+            "Используйте /status чтобы проверить его состояние, /feed чтобы покормить /play чтобы поиграть с ним."
         )
         return ConversationHandler.END
     else:
@@ -48,7 +50,7 @@ async def get_pet_type(update, context):
     pet_name = context.user_data['pet_name']
     user_id = update.message.from_user.id
 
-    if pet_type not in PET_IMAGES:
+    if pet_type not in PET_IMAGES_PRELOADED:
         await update.message.reply_text(
             "Пожалуйста, выберите тип питомца из предложенных вариантов.",
             reply_markup=PET_TYPE_KEYBOARD
@@ -57,19 +59,19 @@ async def get_pet_type(update, context):
 
     create_pet(user_id, pet_name, pet_type)
 
-
-    image_path = PET_IMAGES[pet_type]
-    if os.path.exists(image_path):
-        with open(image_path, 'rb') as photo:
-            await update.message.reply_photo(
-                photo=InputFile(photo),
-                caption=f"Поздравляю! Вы завели нового питомца {pet_type} по имени {pet_name}!\n"
-                        "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
-                reply_markup=ReplyKeyboardRemove()
-            )
+    # Отправляем предзагруженное изображение
+    if pet_type in PET_IMAGES_PRELOADED:
+        photo = PET_IMAGES_PRELOADED[pet_type]
+        photo.seek(0)  # Перематываем файл в начало
+        await update.message.reply_photo(
+            photo=InputFile(photo),
+            caption=f"Поздравляю! Вы завели нового {pet_type} по имени {pet_name}!\n"
+                    "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
+            reply_markup=ReplyKeyboardRemove()
+        )
     else:
         await update.message.reply_text(
-            f"Поздравляю! Вы завели нового питомца {pet_type} по имени {pet_name}!\n"
+            f"Поздравляю! Вы завели нового {pet_type} по имени {pet_name}!\n"
             "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
             reply_markup=ReplyKeyboardRemove()
         )
@@ -109,15 +111,18 @@ async def feed(update, context):
         return
 
     now = datetime.now().isoformat()
-    hunger = max(0, pet['hunger'] - 30)
+    hunger = max(0, pet['hunger'] - STATS_CHANGE_RATES['feed_hunger_reduction'])
+    health = min(100, pet['health'] + STATS_CHANGE_RATES['health_feed_benefit'])
 
     update_pet(
         user_id,
         hunger=hunger,
+        health=health,
         last_fed=now
     )
 
-    await update.message.reply_text(f"Вы покормили {pet['name']} ({pet['pet_type']})! 🍔")
+    await update.message.reply_text(
+        f"{pet['name']} покормлен! 🍔")
 
 
 async def play(update, context):
@@ -129,18 +134,20 @@ async def play(update, context):
         return
 
     now = datetime.now().isoformat()
-    happiness = min(100, pet['happiness'] + 20)
+    happiness = min(100, pet['happiness'] + STATS_CHANGE_RATES['play_happiness_increase'])
+    health = min(100, pet['health'] + STATS_CHANGE_RATES['health_play_benefit'])
 
     update_pet(
         user_id,
         happiness=happiness,
+        health=health,
         last_played=now
     )
 
-    games = ["мяч", "прятки", "догонялки"]
-    game = random.choice(games)
-
-    await update.message.reply_text(f"Вы поиграли с {pet['name']} ({pet['pet_type']}) в {game}! 🎾")
+    game = random.choice(GAMES)
+    await update.message.reply_text(
+        f"{pet['name']} поиграла с Вами в {game}! 🎾 "
+    )
 
 
 async def cancel(update, context):
@@ -174,7 +181,6 @@ def main():
 
 
 if __name__ == '__main__':
-    import random
     from datetime import datetime
 
     main()

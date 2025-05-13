@@ -1,5 +1,8 @@
+# database.py
 import sqlite3
 from datetime import datetime
+from constants import STATS_CHANGE_RATES
+
 
 def init_db():
     conn = sqlite3.connect('tamagotchi.db')
@@ -83,9 +86,9 @@ def check_pet_status(user_id):
     hours_since_fed = (now - last_fed).total_seconds() / 3600
     hours_since_played = (now - last_played).total_seconds() / 3600
 
-    hunger = min(100, max(0, pet['hunger'] + int(10 * hours_since_fed)))
-    happiness = min(100, max(0, pet['happiness'] - int(5 * hours_since_played)))
-    health = min(100, max(0, pet['health'] - int(2 * hours_since_fed) - int(2 * hours_since_played)))
+    hunger = min(100, max(0, pet['hunger'] + int(STATS_CHANGE_RATES['hunger_per_hour'] * hours_since_fed)))
+    happiness = min(100, max(0, pet['happiness'] + int(STATS_CHANGE_RATES['happiness_per_hour'] * hours_since_played)))
+    health = min(100, max(0, pet['health'] + int(STATS_CHANGE_RATES['health_per_hour'] * (hours_since_fed + hours_since_played))))
 
     update_pet(
         user_id,
