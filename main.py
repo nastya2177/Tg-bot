@@ -1,13 +1,13 @@
 # bot.py
 import logging
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram.ext import Application, MessageHandler, filters, CommandHandler, ConversationHandler
 from telegram import ReplyKeyboardRemove, InputFile
 from config import BOT_TOKEN
 from database import init_db, create_pet, get_pet, check_pet_status, update_pet, get_pets_history
 from constants import (PET_IMAGES, PET_TYPE_KEYBOARD, YES_NO_KEYBOARD,
-                       NAME, PET_TYPE, HEALTH_STATUSES, STATS_CHANGE_RATES, GAMES)
+                       ASK_NAME, NAME, PET_TYPE, HEALTH_STATUSES, STATS_CHANGE_RATES, GAMES)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -28,15 +28,13 @@ async def start(update, context):
         )
         return ConversationHandler.END
     else:
-        # Проверяем историю
         history = get_pets_history(user_id)
         if history:
             await update.message.reply_text(
                 "Ваш предыдущий питомец умер... Хотите завести нового?",
                 reply_markup=YES_NO_KEYBOARD
             )
-            context.user_data['asking_for_new'] = True
-            return NAME
+            return ASK_NAME
         else:
             await update.message.reply_text(
                 "Привет! Это виртуальный питомец Тамагочи.\n"
@@ -45,19 +43,30 @@ async def start(update, context):
             return NAME
 
 
+async def handle_new_pet_question(update, context):
+    answer = update.message.text.lower()
+
+    if answer == 'нет':
+        await update.message.reply_text(
+            "Хорошо, когда захотите завести нового питомца - используйте /start",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return ConversationHandler.END
+    elif answer == 'да':
+        await update.message.reply_text(
+            "Отлично! Как вы хотите назвать нового питомца?",
+            reply_markup=ReplyKeyboardRemove()
+        )
+        return NAME
+    else:
+        await update.message.reply_text(
+            "Пожалуйста, ответьте 'Да' или 'Нет'",
+            reply_markup=YES_NO_KEYBOARD
+        )
+        return ASK_NAME
+
+
 async def get_pet_name(update, context):
-    user_id = update.message.from_user.id
-
-    # Если спрашивали о новом питомце после смерти
-    if context.user_data.get('asking_for_new'):
-        if update.message.text.lower() != 'да':
-            await update.message.reply_text(
-                "Хорошо, когда захотите завести нового питомца - используйте /start",
-                reply_markup=ReplyKeyboardRemove()
-            )
-            return ConversationHandler.END
-        context.user_data['asking_for_new'] = False
-
     pet_name = update.message.text
     context.user_data['pet_name'] = pet_name
 
@@ -82,10 +91,8 @@ async def get_pet_type(update, context):
 
     create_pet(user_id, pet_name, pet_type)
 
-    # Отправляем изображение
-    image_path = PET_IMAGES[pet_type]
     try:
-        with open(image_path, 'rb') as photo:
+        with open(PET_IMAGES[pet_type], 'rb') as photo:
             await update.message.reply_photo(
                 photo=InputFile(photo),
                 caption=f"Поздравляю! Вы завели нового {pet_type} по имени {pet_name}!\n"
@@ -221,6 +228,7 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
         states={
+            ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_new_pet_question)],
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_pet_name)],
             PET_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_pet_type)],
         },
@@ -237,6 +245,4 @@ def main():
 
 
 if __name__ == '__main__':
-    from datetime import timedelta
-
     main()
