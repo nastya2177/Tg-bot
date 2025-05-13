@@ -240,6 +240,34 @@ async def cancel(update, context):
     return ConversationHandler.END
 
 
+async def help_command(update, context):
+    help_text = """
+🐾 <b>Доступные команды:</b>
+
+/start - Начать игру или завести нового питомца
+/status - Проверить состояние питомца
+/feed - Покормить питомца (+{feed_health} к здоровью)
+/play - Поиграть с питомцем (+{play_health} к здоровью)
+/history - Показать историю ваших питомцев
+/help - Показать это сообщение
+
+<b>Как ухаживать за питомцем:</b>
+1. Играйте и кормите своего питомца
+2. Следите за здоровьем (/status)
+3. Если здоровье упадёт до 0 - питомец умрёт 😢
+
+""".format(
+        feed_health=STATS_CHANGE_RATES['health_feed_benefit'],
+        play_health=STATS_CHANGE_RATES['health_play_benefit']
+    )
+
+    await update.message.reply_text(
+        help_text,
+        parse_mode='HTML',
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+
 def main():
     init_db()
 
@@ -260,6 +288,7 @@ def main():
     application.add_handler(CommandHandler("feed", feed))
     application.add_handler(CommandHandler("play", play))
     application.add_handler(CommandHandler("history", history))
+    application.add_handler(CommandHandler("help", help_command))
 
     application.run_polling()
 
