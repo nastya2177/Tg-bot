@@ -6,7 +6,7 @@ from telegram import ReplyKeyboardRemove, InputFile
 from config import BOT_TOKEN
 from database import init_db, create_pet, get_pet, check_pet_status, update_pet, get_pets_history
 from constants import (PET_IMAGES, PET_TYPE_KEYBOARD, YES_NO_KEYBOARD,
-                       ASK_NAME, NAME, PET_TYPE, HEALTH_STATUSES, STATS_CHANGE_RATES, GAMES)
+                       ASK_NAME, NAME, PET_TYPE, HEALTH_STATUSES, STATS_CHANGE_RATES, GAMES, PRELOADED_IMAGES )
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -81,7 +81,7 @@ async def get_pet_type(update, context):
     pet_name = context.user_data['pet_name']
     user_id = update.message.from_user.id
 
-    if pet_type not in PET_IMAGES:
+    if pet_type not in PRELOADED_IMAGES:
         await update.message.reply_text(
             "Пожалуйста, выберите тип питомца из предложенных вариантов.",
             reply_markup=PET_TYPE_KEYBOARD
@@ -90,22 +90,29 @@ async def get_pet_type(update, context):
 
     create_pet(user_id, pet_name, pet_type)
 
-    try:
-        with open(PET_IMAGES[pet_type], 'rb') as photo:
+    photo = PRELOADED_IMAGES[pet_type]
+    if photo:
+        try:
             await update.message.reply_photo(
-                photo=InputFile(photo),
+                photo=photo,
                 caption=f"Поздравляю! У Вас теперь есть {pet_type} по имени {pet_name}!\n"
-                        "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
+                       "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
                 reply_markup=ReplyKeyboardRemove()
             )
-    except FileNotFoundError:
-        await update.message.reply_text(
-            f"Поздравляю! У Вас теперь есть {pet_type} по имени {pet_name}!\n"
-            "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
-            reply_markup=ReplyKeyboardRemove()
-        )
+        except Exception as e:
+            logger.error(f"Ошибка при отправке фото: {e}")
+            await send_text_response(update, pet_type, pet_name)
+    else:
+        await send_text_response(update, pet_type, pet_name)
 
     return ConversationHandler.END
+
+async def send_text_response(update, pet_type, pet_name):
+    await update.message.reply_text(
+        f"Поздравляю! У Вас теперь есть {pet_type} по имени {pet_name}!\n"
+        "Используйте /feed чтобы покормить его, /play чтобы поиграть, /status чтобы проверить его состояние.",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 
 async def status(update, context):
@@ -240,32 +247,21 @@ async def cancel(update, context):
 
 
 async def help_command(update, context):
-    help_text = """
-🐾 <b>Доступные команды:</b>
-
-/start - Начать игру или завести нового питомца
-/status - Проверить состояние питомца
-/feed - Покормить питомца (+{feed_health} к здоровью)
-/play - Поиграть с питомцем (+{play_health} к здоровью)
-/history - Показать историю ваших питомцев
-/help - Показать это сообщение
-
-<b>Как ухаживать за питомцем:</b>
-1. Играйте и кормите своего питомца
-2. Следите за здоровьем (/status)
-3. Если здоровье упадёт до 0 - питомец умрёт 😢
-
-""".format(
-        feed_health=STATS_CHANGE_RATES['health_feed_benefit'],
-        play_health=STATS_CHANGE_RATES['health_play_benefit']
-    )
+    try:
+        with open('help.txt', 'r', encoding='utf-8') as file:
+            help_text = file.read().format(
+                feed_health=STATS_CHANGE_RATES['health_feed_benefit'],
+                play_health=STATS_CHANGE_RATES['health_play_benefit']
+            )
+    except Exception as e:
+        logger.error(f"Ошибка при чтении файла help.txt: {e}")
+        help_text = "Извините, не удалось загрузить справочную информацию."
 
     await update.message.reply_text(
         help_text,
         parse_mode='HTML',
         reply_markup=ReplyKeyboardRemove()
     )
-
 
 def main():
     init_db()
