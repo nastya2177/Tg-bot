@@ -2,6 +2,7 @@
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import inspect
 from datetime import datetime
 from constants import STATS_CHANGE_RATES
 import os
@@ -41,7 +42,10 @@ engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 
 def init_db():
-    Base.metadata.create_all(engine)
+    # Проверяем существование таблиц перед созданием
+    inspector = inspect(engine)
+    if not inspector.has_table('pets'):
+        Base.metadata.create_all(engine)
 
 def create_pet(user_id, name, pet_type):
     session = Session()
