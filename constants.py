@@ -9,9 +9,9 @@ PET_IMAGES_DIR = Path("pets")
 
 # Настройки изменения параметров
 STATS_CHANGE_RATES = {
-    'hunger_per_hour': 10,
-    'happiness_per_hour': -5,
-    'health_per_hour': -2,
+    'hunger_per_hour': 1000,
+    'happiness_per_hour': -5000,
+    'health_per_hour': -2000,
     'feed_hunger_reduction': 30,
     'play_happiness_increase': 20,
     'health_feed_benefit': 5,

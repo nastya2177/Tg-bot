@@ -4,6 +4,8 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 from constants import STATS_CHANGE_RATES
+import os
+from sqlalchemy import create_engine
 
 Base = declarative_base()
 
@@ -32,7 +34,10 @@ class PetHistory(Base):
     died_at = Column(DateTime)
     lifespan_seconds = Column(Float)
 
-engine = create_engine('sqlite:///tamagotchi.db')
+DATABASE_URL = os.getenv('DATABASE_URL')
+if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
 
 def init_db():
