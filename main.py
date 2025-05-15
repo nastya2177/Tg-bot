@@ -16,7 +16,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 import os
-from telegram.ext import Updater
+from telegram.ext import ApplicationBuilder
 
 BOT_TOKEN = os.getenv('BOT_TOKEN')
 
@@ -268,12 +268,12 @@ async def help_command(update, context):
         reply_markup=ReplyKeyboardRemove()
     )
 
+
 def main():
-    updater = Updater(BOT_TOKEN)
-    dp = updater.dispatcher
     init_db()
 
-    application = Application.builder().token(BOT_TOKEN).build()
+
+    application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -292,8 +292,9 @@ def main():
     application.add_handler(CommandHandler("history", history))
     application.add_handler(CommandHandler("help", help_command))
 
-    updater.start_polling()
-    updater.idle()
+
+    application.run_polling()
+
 
 
 if __name__ == '__main__':
