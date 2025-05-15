@@ -269,7 +269,7 @@ async def help_command(update, context):
     )
 
 def main():
-    updater = Updater(BOT_TOKEN, use_context=True)
+    updater = Updater(BOT_TOKEN)
     dp = updater.dispatcher
     init_db()
 

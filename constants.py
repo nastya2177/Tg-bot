@@ -20,7 +20,7 @@ STATS_CHANGE_RATES = {
 
 # Типы питомцев и соответствующие файлы
 PET_TYPES = {
-    'кролик': 'Rabbit_portrait.png',
+    'кролик': 'rabbit_portrait.png',
     'сова': 'Owl_portrait.png',
     'ёж': 'Porcupine_portrait.png',
     'обезьянка': 'Monkey_portrait.png'
